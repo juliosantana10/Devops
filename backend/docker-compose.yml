@@ -1,0 +1,64 @@
+version: '3'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:ubuntu-latest
+    ports:
+      - "10051:10051"
+    environment:
+      - DB_SERVER_HOST=zabbix-db
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=zabbix
+    depends_on:
+      - zabbix-db
+    networks:
+      - app-network
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-mysql:ubuntu-latest
+    ports:
+      - "8080:8080"
+    environment:
+      - ZBX_SERVER_HOST=zabbix-server
+      - DB_SERVER_HOST=zabbix-db
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=zabbix
+    depends_on:
+      - zabbix-server
+    networks:
+      - app-network
+
+  zabbix-db:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=zabbix
+      - MYSQL_DATABASE=zabbix
+      - MYSQL_USER=zabbix
+      - MYSQL_PASSWORD=zabbix
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
